@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="app" ng-controller="AdminController">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <link rel="stylesheet" href="/dist/output.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.6.6/flowbite.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.6.6/flowbite.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/js/checkDarkMode.js"></script>
+</head>
+
+<body class="bg-white ">
+<div th:replace="fragments/header :: header"></div>
+<div class="my-24 px-16">
+    <div class="flex flex-col items-center">
+        <div ng-class="darkModeColor" class="text-center">Product Form</div>
+        <form class="w-1/2" name="productForm" ng-submit="submitProduct()">
+            <label for="productImage" class="flex justify-center">
+                <img src="{{image}}" id="previewImage" class="w-48 h-48" alt="" />
+            </label>
+            <div class="mb-6">
+                <label class="block mb-2 text-sm font-medium text-gray-900 ">Name:</label>
+                <input
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  "
+                        type="text" ng-model="product.name" required>
+            </div>
+            <div class="mb-6">
+                <label class="block mb-2 text-sm font-medium text-gray-900 ">Price:</label>
+                <input
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  "
+                        type="number" ng-model="product.price" min="1" required>
+            </div>
+            <div class="mb-6">
+                <label class="block mb-2 text-sm font-medium text-gray-900 ">Category:</label>
+                <select
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  "
+                        ng-model="product.category" ng-options="category as category.name for category in categories"
+                        required>
+                </select>
+            </div>
+            <div ng-class="darkModeColor " class="mb-6 hidden">
+                <input type="file" custom-on-change="handleChangeImage" accept="image/*" ng-model="imageFile"
+                       name="imageInput" id="productImage">
+            </div>
+            <button
+                    class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300  font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
+                    type="submit" ng-disabled="loading">{{loading ? '...loading' : 'Submit'}}</button>
+        </form>
+        <table class="w-full text-sm text-left text-gray-500">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 ">
+            <tr>
+                <th class="px-6 py-3" scope="col">Name</th>
+                <th class="px-6 py-3" scope="col">Image</th>
+                <th class="px-6 py-3" scope="col">Price</th>
+                <th class="px-6 py-3" scope="col">Action</th>
+
+            </tr>
+            </thead>
+            <tbody>
+            <tr class=" align-middle bg-white border-b " ng-repeat="product in products"
+                >
+                <th class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap " scope="row">
+                    {{product.name}}</th>
+                <td>
+                    <img style="width: 100px; height: 100px;" class="thumbnail" src="{{product.image}}" />
+                </td>
+                <td class="px-6 py-4">{{product.price}}</td>
+                <td class="px-6 py-4" scope="row">{{product.stock}}</td>
+                <td class="px-6 py-4">
+                    <button ng-click="edit(product)"
+                            class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2  focus:outline-none ">Edit</button>
+                    <button
+                            class="btn btn-danger focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2  "
+                            ng-click="delete(product)" >Delete</button>
+                </td>
+            </tr>
+
+            </tbody>
+        </table>
+    </div>
+</div>
+<div th:replace="fragments/footer :: footer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.6.5/flowbite.min.js"></script>
+<script src="/js/darkMode.js"></script>
+<script>
+    function convertToBlob(obj) {
+        const json = JSON.stringify(obj);
+        return new Blob([json], {
+            type: 'application/json'
+        });
+    }
+    function getApiUrl(endPoint) {
+        return `http://localhost:8080/api${endPoint}`;
+    }
+    var app = angular.module("app", [])
+    app.directive('customOnChange', function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element, attrs) {
+                var onChangeHandler = scope.$eval(attrs.customOnChange);
+                element.on('change', onChangeHandler);
+                element.on('$destroy', function () {
+                    element.off();
+                });
+            },
+        };
+    });
+    app.controller("AdminController", function ($scope, $http){
+        $scope.image = "https://media.istockphoto.com/id/1222357475/vector/image-preview-icon-picture-placeholder-for-website-or-ui-ux-design-vector-illustration.jpg?s=612x612&w=0&k=20&c=KuCo-dRBYV7nz2gbk4J9w1WtTAgpTdznHu55W9FjimE=";
+        $scope.products = []
+        $scope.categories = []
+        $scope.loading = false;
+        $http.get(getApiUrl('/categories')).then((res) => {
+            $scope.categories = res.data;
+        })
+        $scope.current = null
+        $scope.getData = () => {
+            $http.get(getApiUrl("/public/products")).then(res => {
+                    $scope.products = res.data
+            }, error => {
+            })
+        }
+        $scope.getData()
+        $scope.product = {
+            name: '',
+            price: 0,
+            category: null
+        };
+        $scope.imageFile = null;
+        $scope.reset = () => {
+            $scope.product = {
+                name: '',
+                price: 0,
+                category: {
+                    id: null
+                }
+            };
+            $scope.image = "https://media.istockphoto.com/id/1222357475/vector/image-preview-icon-picture-placeholder-for-website-or-ui-ux-design-vector-illustration.jpg?s=612x612&w=0&k=20&c=KuCo-dRBYV7nz2gbk4J9w1WtTAgpTdznHu55W9FjimE=";
+            $scope.imageFile = null;
+        }
+        $scope.submitProduct = function () {
+            $scope.loading = true;
+            const formData = new FormData();
+            if ($scope.current) {
+                formData.append('product', convertToBlob({ ...$scope.product, id: $scope.current.id }));
+                if ($scope.imageFile) {
+                    formData.append('image', $scope.imageFile);
+                }
+                $http.put(getApiUrl('/admin/products'), formData, {
+                    headers: {
+                        "Content-Type": undefined,
+                        "Authorization": localStorage.getItem("token")
+                    }
+                })
+                    .then(function (response) {
+                        alert(response.data.message)
+                        $scope.current = null
+                        $scope.imageFile = null;
+                        $scope.imagePreviewUrl = null;
+                        $scope.productForm.$setPristine();
+                        $scope.productForm.$setUntouched();
+                        $scope.getData()
+                        $scope.reset()
+                        $scope.loading = false;
+                    })
+                    .catch(function (error) {
+                        $scope.loading = false;
+                        console.error('Error creating product:', error);
+                    })
+            } else {
+                formData.append('product', convertToBlob($scope.product));
+                formData.append('image', $scope.imageFile);
+                $http.post(getApiUrl('/admin/products'), formData, {
+                    headers: {
+                        "Content-Type": undefined,
+                        "Authorization": localStorage.getItem("token")
+                    }
+                })
+                    .then(function (res) {
+                        alert(res?.data?.message)
+                        if (res?.data.success) {
+                            $scope.reset
+                            $scope.imageFile = null;
+                            $scope.imagePreviewUrl = null;
+                            $scope.productForm.$setPristine();
+                            $scope.productForm.$setUntouched();
+                            $scope.getData()
+                            $scope.loading = false;
+
+                        }
+                    })
+                    .catch(function (error) {
+                        console.error('Error creating product:', error);
+                        $scope.loading = false;
+
+                    });
+            }
+        };
+        $scope.handleChangeImage = (e) => {
+            if (e?.target.files.length) {
+                const src = URL.createObjectURL(e.target.files[0]);
+                $scope.imageFile = e.target.files[0]
+                document.getElementById('previewImage').src = src;
+                $scope.image = src;
+            }
+        };
+
+        $scope.edit = (product) => {
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth" // This triggers the smooth scrolling
+            });
+            $scope.current = product
+            $scope.product = {
+                ...product,
+                category: $scope.categories?.find(item => item.id === product.category.id) || null
+            }
+        }
+        $scope.delete = (product) => {
+            $scope.loading = true;
+            $http.delete(getApiUrl("/admin/products/" + product.id), {
+                headers: {
+                    "Authorization": localStorage.getItem("token")
+                }
+            }).then((res) => {
+                $scope.loading = false;
+
+                if (res.data.success) {
+                    $scope.getData()
+                } else {
+                    alert(res?.data?.message || "Some thing went wrong!")
+                }
+            }, (error) => {
+                $scope.loading = false;
+
+                Promise.reject(error)
+                alert("Some thing went wrong!")
+            })
+        }
+    })
+</script>
+<script src="/js/Cart.js"></script>
+</body>
+
+</html>

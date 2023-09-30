@@ -1,0 +1,32 @@
+version: '3.8'
+networks:
+  my_network:
+    driver: bridge
+services:
+  app:
+    image: kaisamirashe/furnitureshop:1.0.0
+    networks:
+      - my_network
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/furniture
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 25112003
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0.27
+    networks:
+      - my_network
+    restart: always
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      DATABASE_HOST: docker-mysql
+      DATABASE_POST: 3306
+      MYSQL_ROOT_PASSWORD: 25112003
+      MYSQL_DATABASE: furniture
+volumes:
+    mysql-data:

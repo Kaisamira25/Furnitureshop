@@ -1,5 +1,5 @@
-create database asm_java6;
-use asm_java6;
+create database furniture;
+use furniture;
 select * from accounts;
 Insert into categories(name) values ("Bàn"), ("Đèn"), ("Ghế"), ("Sen đá"), ("Lọ");
 Insert into products (name,price,image,available,category_id) values
